@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Mail,
   Phone,
@@ -6,11 +6,46 @@ import {
   User,
   Users,
   BriefcaseBusiness,
+  Check,
+  X,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import axios from "axios";
 
 export default function GovernmentPortal() {
   const [activeSection, setActiveSection] = useState("dashboard");
   const [language, setLanguage] = useState("ro");
+  const [eligibilityData, setEligibilityData] = useState([]);
+  const [expandedIndex, setExpandedIndex] = useState(null);
+  const [showEligibility, setShowEligibility] = useState(false);
+  
+  const location = useLocation();
+
+  useEffect(() => {
+    // If eligibility section is active, fetch the data
+    if (showEligibility) {
+      fetchEligibilityData();
+    }
+  }, [showEligibility]);
+
+  const fetchEligibilityData = async () => {
+    try {
+      // Example: Fetch data for the logged in user (Vasile Schidu)
+      const idno = "2002004005001"; // Using the IDNP from the profile
+      const url = `http://localhost:8080/api/eligibility/person/${idno}`;
+      const res = await axios.get(url);
+      setEligibilityData(res.data || []);
+    } catch (err) {
+      console.error("Error fetching eligibility:", err);
+    }
+  };
+
+  const toggleEligibilitySection = () => {
+    setShowEligibility(!showEligibility);
+    setActiveSection("eligibility");
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
@@ -49,14 +84,7 @@ export default function GovernmentPortal() {
           <div className="relative">
             <button className="text-sm flex items-center gap-1">
               <span>Vasile Schidu</span>
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <img src={User} alt="" />
-              </svg>
+              <User size={16} />
             </button>
           </div>
         </div>
@@ -175,12 +203,12 @@ export default function GovernmentPortal() {
             </div>
 
             <div className="p-2">
-
-              
-
-              <button className="w-full text-left p-2 rounded flex items-center gap-2 hover:bg-gray-100">
-                <BriefcaseBusiness size={18} className="text-blue-600" />
-                <span>Eligibilitatea Interprinderei </span>
+              <button 
+                className={`w-full text-left p-2 rounded flex items-center gap-2 ${showEligibility ? 'bg-blue-50 text-blue-700' : 'hover:bg-gray-100'}`}
+                onClick={toggleEligibilitySection}
+              >
+                <BriefcaseBusiness size={18} className={showEligibility ? "text-blue-700" : "text-blue-600"} />
+                <span>Eligibilitatea Întreprinderii</span>
               </button>
             </div>
           </div>
@@ -188,15 +216,140 @@ export default function GovernmentPortal() {
 
         {/* Main Dashboard */}
         <div className="flex-1 p-6 bg-gray-100">
-          <h1 className="text-2xl font-semibold mb-6">
-            Bună dimineața, Vasile! 👋
-          </h1>
+          {!showEligibility ? (
+            <>
+              <h1 className="text-2xl font-semibold mb-6">
+                Bună dimineața, Vasile! 👋
+              </h1>
+              <div className="grid grid-cols-2 gap-6">
+                {/* Dashboard content would go here */}
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h2 className="text-lg font-medium mb-4">Servicii Populare</h2>
+                  <p className="text-gray-600">
+                    Accesează rapid serviciile de care ai nevoie.
+                  </p>
+                </div>
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h2 className="text-lg font-medium mb-4">Notificări</h2>
+                  <p className="text-gray-600">
+                    Nu ai nicio notificare nouă.
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <h1 className="text-2xl font-semibold">
+                  Eligibilitatea Întreprinderii
+                </h1>
+                <button 
+                  onClick={() => setShowEligibility(false)}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  Înapoi la tabloul de bord
+                </button>
+              </div>
+              
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                {eligibilityData.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="text-gray-400 mb-4">
+                      <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-medium text-gray-700 mb-2">Nu există date de eligibilitate</h3>
+                    <p className="text-gray-500 text-center max-w-md">
+                      Momentan nu avem date despre eligibilitatea întreprinderii tale pentru programe de finanțare.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    {eligibilityData.map((program, index) => (
+                      <div key={index} className="mb-4">
+                        {/* header row */}
+                        <div
+                          className={`flex justify-between bg-blue-50 px-4 py-4 rounded-xl
+                                      items-center cursor-pointer transition-all
+                                      ${expandedIndex === index ? "bg-blue-100" : ""}`}
+                          onClick={() =>
+                            setExpandedIndex(expandedIndex === index ? null : index)
+                          }
+                        >
+                          <span className="font-medium">{program.program}</span>
+                          <div className="flex items-center">
+                            {program.eligible ? (
+                              <span
+                                className="text-green-500 bg-green-100 px-3 py-1 rounded-xl
+                                            font-medium border mr-2"
+                              >
+                                Eligibil
+                              </span>
+                            ) : (
+                              <span
+                                className="text-red-500 bg-red-100 px-3 py-1 rounded-xl
+                                            font-medium border mr-2"
+                              >
+                                Neeligibil
+                              </span>
+                            )}
+                            {expandedIndex === index ? (
+                              <ChevronUp size={18} />
+                            ) : (
+                              <ChevronDown size={18} />
+                            )}
+                          </div>
+                        </div>
 
+                        {/* details */}
+                        {expandedIndex === index && (
+                          <div
+                            className="mt-2 pl-4 pr-2 py-3 bg-gray-50 rounded-xl
+                                          border border-gray-100"
+                          >
+                            <h3 className="font-medium mb-2 text-gray-700">Detalii:</h3>
 
+                            <div className="flex items-center justify-between py-2">
+                              <span className="text-sm">Motiv:</span>
+                              <span className="text-sm text-gray-700">
+                                {program.reason}
+                              </span>
+                            </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            
-            
+                            <div
+                              className="flex items-center justify-between py-2
+                                            border-t border-gray-200 mt-2"
+                            >
+                              <span className="text-sm">Suma disponibilă:</span>
+                              <span className="text-sm font-medium text-blue-600">
+                                {program.moneyValue?.toLocaleString("ro-RO") || "0"} MDL
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-between py-2 border-t border-gray-200">
+                              <span className="text-sm">Eligibilitate:</span>
+                              {program.eligible ? (
+                                <div className="flex items-center text-green-600">
+                                  <Check size={18} className="mr-1" />
+                                  <span className="text-xs">Îndeplinit</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center text-red-500">
+                                  <X size={18} className="mr-1" />
+                                  <span className="text-xs">Neîndeplinit</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -257,6 +410,6 @@ export default function GovernmentPortal() {
           </div>
         </div>
       </footer>
-    </div> </div>
+    </div>
   );
 }
